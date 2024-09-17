@@ -5,7 +5,7 @@ The plan for this is make the creation of disposable demo environments easier th
 
 Eventually we may choose to move this into the azure-samples repo, but for now this is an external effort. 
 
-We will build 
+## Base Build
 
 - Resource groups
 - 3-region vnet with multiple subnets
@@ -53,3 +53,47 @@ We will build
 - 2x ac registries (cross region)
 - Azure Communication Services config to Teams / Bot Service
 - service endpoints
+- Azure Private Link: For securely connecting services like SQL Database, Storage, or your own services, through private endpoints.
+- Azure Files
+  
+## Deployment enhancements 
+
+### Identity and Access Management:
+- Entra ID Conditional Access: Policies to enforce security rules based on the user, location, and device compliance.
+- Entra ID Privileged Identity Management (PIM): Manage, control, and monitor access to critical resources in Azure to limit standing admin access.
+- Entra ID External Identities : Extend your AD to handle customers (B2C) or external partners (B2B) securely.
+- Multi-Factor Authentication (MFA): Enforcing MFA on Entra AD identities for an extra layer of security.
+
+### Monitoring and management dashboard 
+- Azure Monitor: Centralized monitoring for logs, metrics, and telemetry from all Azure services.
+- Azure Application Insights: For detailed performance monitoring and diagnostics of web applications.
+- Azure Log Analytics: Collect and analyze data from resources, with powerful querying and alerting capabilities.
+- Azure Security Center (Microsoft Defender for Cloud): A unified infrastructure security management system that strengthens your security posture.
+- Azure Policy: Enforcing organizational standards and assessing compliance at scale.
+
+### Backup and Restore testing and Business Continuity Sample 
+- Disaster recovery testing.
+- Deployment Pipeline Exports and deployment redirection
+- Azure Backup
+
+### Further Networking
+- Azure Load Balancers
+- Azure Traffic Manager
+- Azure Front Door
+- Certificate Management - and Internal CA
+- VWAN ?? 
+- Azure DDoS Protection
+
+### Pluggable Services
+- Azure Queue Storage/Service Bus: For reliable messaging between distributed applications.
+- Azure API Management: Publish and manage APIs to internal and external clients.
+- Azure Event Grid: A managed event routing service to handle communication between services and applications.
+- Azure Logic Apps: Automating workflows and business processes by integrating with various services.
+- Azure Functions: Serverless computing for event-driven workloads (ideal for microservices and event handling).
+
+### Other licences to apply / consider
+- Microsoft 365 Integration (Exchange, Teams, Sharepoint) 
+- Microsoft Intune
+- Power Platform
+- SAP HANA
+- Azure Arc
