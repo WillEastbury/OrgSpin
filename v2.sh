@@ -166,6 +166,8 @@ echo done!
     # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --location $location --app-type registration --appid $appId
     # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --appid myAppId --app-type registration --endpoint "https://${webAppName}azurewebsites.net/api/messages"} --kind registration --password password
 
+# Deploy Bot Channels Registration and endpoint
+
 # Deploy the web app and function apps 
 
     # build / publish dotnet publish -c Release -o ./publish --runtime linux-x64
@@ -174,5 +176,5 @@ echo done!
 
     # func azure functionapp publish $functionAppName --csharp --nozip
     
-# Deploy Bot Channels Registration and endpoint
+
 
