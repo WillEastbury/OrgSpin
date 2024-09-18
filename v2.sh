@@ -1,6 +1,24 @@
-basename="wieastdemo"
-resourceGroup="$basename"
-location="uksouth"
+!#/bin/bash
+# This script creates a resource group and deploys a set of resources to Azure
+
+if [ $# -eq 0 ]
+  then
+    echo "No arguments supplied, param 1 should be the base name of the resources, param 2 should be the location"
+    exit 1
+fi
+
+if [ $# -eq 1 ]
+  then
+    echo "No location supplied, param 2 should be the location"
+    exit 1
+fi
+
+#basename="wieastdemo"
+#location="uksouth"
+basename=$1
+location=$2
+
+resourceGroup="${basename}rg"
 cosmosDbAccount="${basename}cosmosdb"
 cosmosDbDatabase="${basename}db"
 openAIName="${basename}openai"
@@ -37,8 +55,9 @@ az storage account create --name $storageAccountName --resource-group $resourceG
 az appservice plan create --name $appServicePlan --resource-group $resourceGroup --location $location --sku $appServicePlanSku 
 az webapp create --name $webAppName --resource-group $resourceGroup --plan $appServicePlan
 az functionapp create --resource-group $resourceGroup --consumption-plan-location $location --runtime dotnet --name $functionAppName --storage-account $storageAccountName
-az cosmosdb create --name $cosmosDbAccount --resource-group $resourceGroup --locations regionName=$location``
+az cosmosdb create --name $cosmosDbAccount --resource-group $resourceGroup --locations regionName=$location
 az cosmosdb sql database create --account-name $cosmosDbAccount --resource-group $resourceGroup --name $cosmosDbDatabase
+az cosmosdb sql container create --account-name $cosmosDbAccount --resource-group $resourceGroup --database-name $cosmosDbDatabase --name "items" --partition-key-path "/id"
 #az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --location $location --app-type registration --appid $appId
 #az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --appid myAppId --app-type registration --endpoint "https://${webAppName}azurewebsites.net/api/messages"} --kind registration --password password
 resourceId=$(az cognitiveservices account show --name $openAIName --resource-group $resourceGroup --query id --output tsv)
