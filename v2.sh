@@ -14,8 +14,8 @@ if [ $# -eq 1 ]
     exit 1
 fi
 
-#basename="willdemo2"
-#location="uksouth"
+basename="willdemo"
+location="uksouth"
 
 basename=$1
 location=$2
@@ -32,13 +32,19 @@ functionAppName="${basename}functionapp"
 storageAccountName="${basename}storage"
 vnetName="${basename}vnet"
 addressPrefix="10.0.0.0/16"
+# Subnet 1 - app gateway subnet
+# subnet 2 - private endpoints
+# subnet 3 - vnet integration for app service and function app
 subnet1Name="${vnetName}subnet1"
 subnet2Name="${vnetName}subnet2"
+subnet3Name="${vnetName}subnet3"
 subnet1Prefix="10.0.1.0/24"
 subnet2Prefix="10.0.2.0/24"
+subnet3Prefix="10.0.3.0/24"
 appGatewayName="${basename}appgateway"
 publicIPName="${basename}publicip"
 botServiceName="${basename}botservice"
+acsServiceName="${basename}acsservice"
 
 appServicePlanSku="S1"
 functionsSku="EP1"
@@ -50,7 +56,8 @@ agcap=1
 appId="your-app-id" 
 appPassword="your-app-password"
 
-az login --use-device-code
+az login
+
 
 az group create --name $resourceGroup --location $location
 az network vnet create --resource-group $resourceGroup --name $vnetName --address-prefix $addressPrefix --location $location
@@ -124,13 +131,24 @@ poolbackendaddress1=${basename}fnappprivateendpoint.azurewebsites.net
 poolbackendaddress2=${basename}webappprivateendpoint.azurewebsites.net
 
 # Setup the application gateway
-# Bug? why can't I do this next line to create an empty frontend ip configuration
-az network application-gateway create --resource-group $resourceGroup --name $appGatewayName --vnet-name $vnetName --subnet $subnet1Name --capacity $agcap --http-settings-cookie-based-affinity Enabled --sku $agsku --public-ip-address $publicIPName 
-az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webappbackendpool --servers $(az network private-endpoint show --name ${basename}webappprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
-az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionappbackendpool --servers $(az network private-endpoint show --name ${basename}functionapprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
-az network application-gateway http-settings create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webappsettings --port 80 --protocol Http --cookie-based-affinity Disabled --timeout 20 --request-timeout 20 --connection-draining-timeout 0 --probe ${basename}webappprobe --backend-pool ${basename}webappbackendpool
-az network application-gateway http-settings create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionappsettings --port 80 --protocol Http --cookie-based-affinity Disabled --timeout 20 --request-timeout 20 --connection-draining-timeout 0 --probe ${basename}functionappprobe --backend-pool ${basename}functionappbackendpool
-az network application-gateway listener create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}listener --frontend-port 80 --frontend-ip ${basename}frontendip --protocol Http
-az network application-gateway url-path-map create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webapprule --default-backend-address-pool ${basename}webappbackendpool --default-backend-http-settings ${basename}webappsettings --path-rules "/webapp/*=${basename}webappbackendpool"
-az network application-gateway url-path-map create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionapprule --default-backend-address-pool ${basename}functionappbackendpool --default-backend-http-settings ${basename}functionappsettings --path-rules "/api/*=${basename}functionappbackendpool"
+az network application-gateway create --resource-group $resourceGroup --name $appGatewayName --vnet-name $vnetName --subnet $subnet1Name --capacity $agcap --http-settings-cookie-based-affinity Enabled --sku $agsku --public-ip-address $publicIPName --servers ${basename}functionapp.azurewebsites.net --
+priority 1
+
+# az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webappbackendpool --servers $(az network private-endpoint show --name ${basename}webappprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
+# az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionappbackendpool --servers $(az network private-endpoint show --name ${basename}functionapprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
+# az network application-gateway http-settings create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webappsettings --port 80 --protocol Http --cookie-based-affinity Disabled --timeout 20 --request-timeout 20 --connection-draining-timeout 0 --probe ${basename}webappprobe --backend-pool ${basename}webappbackendpool
+# az network application-gateway http-settings create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionappsettings --port 80 --protocol Http --cookie-based-affinity Disabled --timeout 20 --request-timeout 20 --connection-draining-timeout 0 --probe ${basename}functionappprobe --backend-pool ${basename}functionappbackendpool
+# az network application-gateway listener create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}listener --frontend-port 80 --frontend-ip ${basename}frontendip --protocol Http
+# az network application-gateway url-path-map create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webapprule --default-backend-address-pool ${basename}webappbackendpool --default-backend-http-settings ${basename}webappsettings --path-rules "/webapp/*=${basename}webappbackendpool"
+# az network application-gateway url-path-map create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionapprule --default-backend-address-pool ${basename}functionappbackendpool --default-backend-http-settings ${basename}functionappsettings --path-rules "/api/*=${basename}functionappbackendpool"
+
+az communication create --data-location global --name $acsServiceName --resource-group $resourceGroup --mi-system-assigned
+
+# Security Wise we also need some tags :) 
+
+# Force tunnel all traffic on the vnet 
+# Add Outbound NSG rule for VNet Web App -> AzureBotService
+# Deploy ACS Instance 
+# Deploy Bot Service
+# Deploy Bot Channels Registration
 
