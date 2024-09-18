@@ -76,7 +76,7 @@ az storage account create --name $storageAccountName --resource-group $resourceG
 
 az appservice plan create --name $appServicePlan --resource-group $resourceGroup --location $location --sku $appServicePlanSku
 az webapp create --name $webAppName --resource-group $resourceGroup --plan $appServicePlan
-az webapp vnet-integration add --name $webAppName -resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name
+az webapp vnet-integration add --name $webAppName --resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name
 
 az functionapp plan create --name $functionAppPlanName --resource-group $resourceGroup --location $location --sku $functionsSku
 az functionapp create --resource-group $resourceGroup --runtime dotnet --name $functionAppName --storage-account $storageAccountName --plan $functionAppPlanName
