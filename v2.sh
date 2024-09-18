@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 # run like this 
-# bash v2.sh willdemo uksouth > output.log 2>&1 | tee -a error.log 
+# bash v2.sh willdemo uksouth | tee -a error.log 
 # This script creates a resource group and deploys a set of resources to Azure for a basic vnet protected bot that can integrate with Microsoft Teams
 
 if [ $# -eq 0 ]
@@ -19,8 +19,8 @@ fi
 basename=$1 
 location=$2
 
-#basename="wiukdemo"
-#location="uksouth"
+echo "Creating resources with basename $basename in location $location"
+
 resourceGroup="${basename}rg"
 cosmosDbAccount="${basename}cosmosdb"
 cosmosDbDatabase="${basename}db"
@@ -59,24 +59,28 @@ appPassword="your-app-password"
 
 az login
 
+echo creating rg $resourceGroup
 az group create --name $resourceGroup --location $location
+
+echo creating vnet $vnetName
 az network vnet create --resource-group $resourceGroup --name $vnetName --address-prefix $addressPrefix --location $location
 az network vnet subnet create --resource-group $resourceGroup --vnet-name $vnetName --name $subnet1Name --address-prefix $subnet1Prefix
 az network vnet subnet create --resource-group $resourceGroup --vnet-name $vnetName --name $subnet2Name --address-prefix $subnet2Prefix
 az network vnet subnet create --resource-group $resourceGroup --vnet-name $vnetName --name $subnet3Name --address-prefix $subnet3Prefix --delegations Microsoft.Web/serverFarms
 az network public-ip create --resource-group $resourceGroup --name $publicIPName --allocation-method Static
 
+echo creating resources
 ## BUG -- why do i need to specify the custom domain for cognitive services when run through cli ?
 az cognitiveservices account create --name $openAIName --resource-group $resourceGroup --kind $cogServAcctType --sku $cogServSku --location $location --custom-domain $openAIName --assign-identity
 az storage account create --name $storageAccountName --resource-group $resourceGroup --location $location --sku Standard_LRS
 
-az appservice plan create --name $appServicePlan --resource-group $resourceGroup --location $location --sku $appServicePlanSku 
-az webapp create --name $webAppName --resource-group $resourceGroup --plan $appServicePlan 
-az webapp vnet-integration add --name $webAppName -resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name 
+az appservice plan create --name $appServicePlan --resource-group $resourceGroup --location $location --sku $appServicePlanSku
+az webapp create --name $webAppName --resource-group $resourceGroup --plan $appServicePlan
+az webapp vnet-integration add --name $webAppName -resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name
 
 az functionapp plan create --name $functionAppPlanName --resource-group $resourceGroup --location $location --sku $functionsSku
 az functionapp create --resource-group $resourceGroup --runtime dotnet --name $functionAppName --storage-account $storageAccountName --plan $functionAppPlanName
-az functionapp vnet-integration add --name $functionAppName -resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name 
+az functionapp vnet-integration add --name $functionAppName -resource-group $resourceGroup --vnet $vnetName --subnet $subnet3Name
 
 az cosmosdb create --name $cosmosDbAccount --resource-group $resourceGroup --locations regionName=$location
 az cosmosdb sql database create --account-name $cosmosDbAccount --resource-group $resourceGroup --name $cosmosDbDatabase
@@ -86,9 +90,11 @@ az cosmosdb sql container create --account-name $cosmosDbAccount --resource-grou
 # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --appid myAppId --app-type registration --endpoint "https://${webAppName}azurewebsites.net/api/messages"} --kind registration --password password
 
 # Private link infrastructure
+echo creating private link infrastructure
+
 az network private-dns zone create --resource-group $resourceGroup --name privatelink.documents.azure.com
 az network private-dns zone create --resource-group $resourceGroup --name privatelink.cognitiveservices.azure.com
-az network private-dns zone create --resource-group $resourceGroup --name privatelink.azurewebsites.net 
+az network private-dns zone create --resource-group $resourceGroup --name privatelink.azurewebsites.net
 
 az network private-dns link vnet create --resource-group $resourceGroup --zone-name privatelink.documents.azure.com --name ${basename}dnslink --virtual-network $vnetName --registration-enabled false
 az network private-dns link vnet create --resource-group $resourceGroup --zone-name privatelink.cognitiveservices.azure.com --name ${basename}dnslink --virtual-network $vnetName --registration-enabled false
@@ -98,23 +104,26 @@ az network private-dns link vnet create --resource-group $resourceGroup --zone-n
 # https://github.com/Azure/azure-cli/issues/21457#issuecomment-1068866984
 
 # Setup the private endpoint for the cognitive services account
-resIdcr=$(az cognitiveservices account show --name $openAIName --resource-group $resourceGroup --query id --output tsv)
+echo setting up private endpoint for cognitive services
+resIdcr=$(az cognitiveservices account show --name $openAIName --resource-group $resourceGroup --query id --output tsv) 
 resourceId=${resIdcr//$'\r'}
 az resource update --ids $resourceId --set properties.networkAcls="{'defaultAction':'Deny'}"
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}cogservprivateendpoint    --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id account --connection-name ${basename}cogservconnection 
-ipwithlf=$(az network private-endpoint show --name ${basename}cogservprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
+ipwithlf=$(az network private-endpoint show --name ${basename}cogservprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv) 
 ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.cognitiveservices.azure.com --record-set-name $openAIName --ipv4-address $ipwithoutlf
 
 # Setup the cosmosdb private endpoint and DNS etc
+echo setting up private endpoint for cosmosdb
 resIdcr=$(az cosmosdb show --name $cosmosDbAccount --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}cosmosdbprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sql --connection-name ${basename}sqlconnection
-ipwithlf=$(az network private-endpoint show --name ${basename}cosmosdbprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
+ipwithlf=$(az network private-endpoint show --name ${basename}cosmosdbprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv) 
 ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.documents.azure.com --record-set-name $cosmosDbAccount --ipv4-address $ipwithoutlf
 
 # Setup the app service private endpoints
+echo setting up private endpoint for app service
 resIdcr=$(az webapp show --name $webAppName --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}webappprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}webconnection
@@ -123,23 +132,26 @@ ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $webAppName --ipv4-address $ipwithoutlf
 
 # Now the function app 
+echo setting up private endpoint for function app
 resIdcr=$(az functionapp show --name $functionAppName --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}fnappprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}fnconnection
 ipwithlf=$(az network private-endpoint show --name ${basename}fnappprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
 ipwithoutlf=${ipwithlf//$'\r'}
-az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $functionAppName --ipv4-address $ipwithoutlf
+az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $functionAppName --ipv4-address $ipwithoutlf 
 
 poolbackendaddress1=${basename}fnappprivateendpoint.azurewebsites.net
 poolbackendaddress2=${basename}webappprivateendpoint.azurewebsites.net
 
 # Setup the application gateway with very basic settings
-az network application-gateway create --resource-group $resourceGroup --name $appGatewayName --vnet-name $vnetName --subnet $subnet1Name --capacity $agcap --http-settings-cookie-based-affinity Enabled --sku $agsku --public-ip-address $publicIPName --servers ${basename}functionapp.azurewebsites.net --
-priority 1
+echo setting up application gateway
+az network application-gateway create --resource-group $resourceGroup --name $appGatewayName --vnet-name $vnetName --subnet $subnet1Name --capacity $agcap --http-settings-cookie-based-affinity Enabled --sku $agsku --public-ip-address $publicIPName --servers ${basename}functionapp.azurewebsites.net --priority 1
 
 # Deploy ACS Instance 
+echo setting up acs instance
 az communication create --data-location global --name $acsServiceName --resource-group $resourceGroup --mi-system-assigned
 
+echo done! 
 # # # # # # # # # # # # # # # # # # # # # 
 # Security Wise we also need some tags :) 
 # # # # # # # # # # # # # # # # # # # # #

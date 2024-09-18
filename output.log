@@ -1,2 +1,8 @@
-WARNING: A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. Please continue the login in the web browser. If no web browser is available or if the web browser fails to open, use device code flow with `az login --use-device-code`.
-gio: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize?client_id=04b07795-8ddb-461a-bbee-02f9e1bf7b46&response_type=code&redirect_uri=http%3A%2F%2Flocalhost%3A35143&scope=https%3A%2F%2Fmanagement.core.windows.net%2F%2F.default+offline_access+openid+profile&state=PcNGjTputxWCUqBv&code_challenge=84TkCg9mkJfJTs2mh-rQ4ZnFlRtsYTzicuCB8NknuTc&code_challenge_method=S256&nonce=d59aab94c5b7adb102a32f4a536214e1c53c4418bc9d15c0fe955675ad140bf3&client_info=1&claims=%7B%22access_token%22%3A+%7B%22xms_cc%22%3A+%7B%22values%22%3A+%5B%22CP1%22%5D%7D%7D%7D&prompt=select_account: Operation not supported
+ERROR: the following arguments are required: --resource-group/-g
+
+Examples from AI knowledge base:
+az webapp vnet-integration add --resource-group MyResourceGroup --name MyWebapp --vnet MyVnetName --subnet MySubnetName --slot [slot]
+Add a regional virtual network integration to a webapp
+
+https://docs.microsoft.com/en-US/cli/azure/webapp/vnet-integration#az_webapp_vnet_integration_add
+Read more about the command in reference docs
