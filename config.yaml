@@ -1,0 +1,41 @@
+
+global-location:
+  - key_vault
+  - communication_services
+  - bot_service
+multi-location:
+  - locations: 
+    - UKSouth
+    - UKWest
+    - SwedenCentral
+    vnets:
+      name: "{prefix}{region}vnet1"
+      address_prefix: "10.0.0.0/16"
+      subnet_block:
+        - count: 2
+          name: "{prefix}subnet{number}"
+          address_prefix: "10.0.1.x"
+          networkbits: 24
+          subnetbits: 8
+      name: "{prefix}{region}vnet2"
+      address_prefix: "10.1.0.0/16"
+      subnet_block:
+        - count: 2
+          name: "{prefix}subnet{number}"
+          address_prefix: "10.1.1.{netmask}"
+          networkbits: 24
+          subnetbits: 8
+    services:
+      - app_gateway
+      - app_service_environment_3
+      - Logic_apps_standard
+      - firewall
+      - vm_windows_dc
+      - vm_appserver
+      - aks_cluster
+      - sql_server
+      - sql_database
+oneoff-location:
+  - name: UKSouth
+    services:
+      - azure_bastion

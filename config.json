@@ -1,0 +1,88 @@
+{
+  "params": "{{domainfqdn}}",
+  "regions": ["UKSouth", "WestEurope", "NorthEurope"],
+  "users": [
+    {
+        "uid":"domainadmin", 
+        "pwd":"{{gen_pass}}"
+    },
+    {
+        "uid":"{{gen_user}}", 
+        "pwd":"{{gen_pass_user}}"
+    }
+  ],
+  "resources": {
+    "vnets": {
+        
+      "regions": "All",
+      "bastion_regions": "UKSouth",
+      "peeredTo": "All",
+      "name": "{prefix}{region}vnethub",
+      "address_prefix": "10.0.0.0/16",
+      "subnets": [
+        {
+            "name": "{prefix}{region}subnet1", 
+            "address_prefix": "10.0.1.0/24"
+        },
+        {
+            "name": "{prefix}{region}subnet2", 
+            "address_prefix": "10.0.2.0/24"
+        }
+      ]
+    },
+    "storage_accounts": {
+      "regions": "All",
+      "name": "{prefix}storage{region}"
+    },
+    "key_vaults": {
+      "regions": "All",
+      "name": "{prefix}kv{region}"
+    },
+    "virtual_machines": [
+        {
+            "regions": "All",
+            "type": "windows",
+            "image": "Win2019Datacenter",
+            "publicip": "true",
+            "openports": null,
+            "disks": 2,
+            "size": "Standard_DS2_v2",
+            "name": "{prefix}vm-windows-dc{region}",
+            "admin_username": "azureuser23",
+            "deploy_in_subnet": "{prefix}{region}subnet1",
+            "domainjoin": {
+                "domain": "",
+                "oupath": "OU=DomainControllers,DC=demos,DC={f2},DC={f3}",
+                "domainuser": "domainadmin",
+                "domainpwd": "{{gen_pass}}"
+            }
+        },
+        {
+            "regions": "All",
+            "type": "windows",
+            "image": "Win2019Datacenter",
+            "publicip": "true",
+            "openports": null,
+            "disks": 2,
+            "size": "Standard_DS2_v2",
+            "name": "{prefix}vm-windows-app{region}",
+            "admin_username": "azureuser23",
+            "deploy_in_subnet": "{prefix}{region}subnet1",
+            "domainjoin": {
+                "domain": "contoso.com",
+                "oupath": "OU=AppServers,DC=contoso,DC=com",
+                "domainuser": "domainadmin",
+                "domainpwd": "{{gen_pass}}"
+            }
+        }
+    ],
+    "app_service_plans": {
+            "regions": "All",
+            "name": "{prefix}appsvcplan{region}"
+    },
+    "azure_container_registry": {
+      "regions": "All",
+      "name": "{prefix}acr{region}"
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "$schema": "https://schema.management.azure.com/2020-06-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Fully qualified domain name"
+      }
+    },
+    "genPass": {
+      "type": "string",
+      "metadata": {
+        "description": "Generated password for domain admin"
+      }
+    },
+    "genUserPass": {
+      "type": "string",
+      "metadata": {
+        "description": "Generated password for domain user"
+      }
+    },
+    "prefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Prefix for resource names"
+      }
+    }
+  },
+  "variables": {
+    "regions": ["UKSouth", "WestEurope", "NorthEurope"],
+    "subnetAddressPrefixes": {
+      "subnet1": "10.0.1.0/24",
+      "subnet2": "10.0.2.0/24"
+    },
+    "vnetAddressPrefix": "10.0.0.0/16",
+    "vmSize": "Standard_DS2_v2",
+    "image": "Win2019Datacenter",
+    "bastionSubnetName": "AzureBastionSubnet",
+    "bastionPublicIpName": "bastionPublicIP"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2021-05-01",
+      "name": "[concat(parameters('prefix'), 'vnet', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnetAddressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[concat(parameters('prefix'), 'subnet1')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetAddressPrefixes').subnet1]"
+            }
+          },
+          {
+            "name": "[concat(parameters('prefix'), 'subnet2')]",
+            "properties": {
+              "addressPrefix": "[variables('subnetAddressPrefixes').subnet2]"
+            }
+          }
+        ]
+      },
+      "copy": {
+        "name": "vnetLoop",
+        "count": "[length(variables('regions'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2021-05-01",
+      "name": "[concat(parameters('prefix'), 'bastionPublicIP')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "sku": {
+          "name": "Basic"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/bastionHosts",
+      "apiVersion": "2021-05-01",
+      "name": "[concat(parameters('prefix'), 'bastion')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "bastionIPConfig",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('prefix'), 'bastionPublicIP'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', concat(parameters('prefix'), 'vnet'), variables('bastionSubnetName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2021-07-01",
+      "name": "[concat(parameters('prefix'), 'vm-windows-dc', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "[variables('image')]",
+            "version": "latest"
+          }
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('prefix'), 'vm-windows-dc', copyIndex())]",
+          "adminUsername": "azureuser23",
+          "adminPassword": "[parameters('genPass')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": true
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('prefix'), 'nic-', copyIndex()))]"
+            }
+          ]
+        },
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        }
+      },
+      "copy": {
+        "name": "vmLoop",
+        "count": "[length(variables('regions'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-01-01",
+      "name": "[concat(parameters('prefix'), 'appsvcplan', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "sku": {
+          "Tier": "Standard",
+          "Name": "S1",
+          "Size": "S1",
+          "Family": "S",
+          "Capacity": 1
+        }
+      },
+      "copy": {
+        "name": "appServicePlanLoop",
+        "count": "[length(variables('regions'))]"
+      }
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2021-09-01",
+      "name": "[concat(parameters('prefix'), 'acr', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {}
+    }
+  ],
+  "outputs": {
+    "adminPassword": {
+      "type": "string",
+      "value": "[parameters('genPass')]"
+    },
+    "userPassword": {
+      "type": "string",
+      "value": "[parameters('genUserPass')]"
+    }
+  }
+}
