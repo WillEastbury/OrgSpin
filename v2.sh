@@ -14,11 +14,11 @@ if [ $# -eq 1 ]
     exit 1
 fi
 
-basename="willdemo2"
-location="uksouth"
+#basename="willdemo2"
+#location="uksouth"
 
-#basename=$1
-#location=$2
+basename=$1
+location=$2
 
 resourceGroup="${basename}rg"
 cosmosDbAccount="${basename}cosmosdb"
@@ -49,6 +49,8 @@ agcap=1
 
 appId="your-app-id" 
 appPassword="your-app-password"
+
+az login --use-device-code
 
 az group create --name $resourceGroup --location $location
 az network vnet create --resource-group $resourceGroup --name $vnetName --address-prefix $addressPrefix --location $location
