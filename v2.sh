@@ -98,11 +98,6 @@ if false; then
         az cosmosdb sql database create --account-name $cosmosDbAccount --resource-group $resourceGroup --name $cosmosDbDatabase
         az cosmosdb sql container create --account-name $cosmosDbAccount --resource-group $resourceGroup --database-name $cosmosDbDatabase --name "items" --partition-key-path "/id"
 
-
-
-    # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --location $location --app-type registration --appid $appId
-    # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --appid myAppId --app-type registration --endpoint "https://${webAppName}azurewebsites.net/api/messages"} --kind registration --password password
-
     echo creating private link infrastructure in vnet $vnetName
     echo creating private dns zones
         az network private-dns zone create --resource-group $resourceGroup --name privatelink.documents.azure.com
@@ -163,13 +158,21 @@ az communication create --data-location global --name $acsServiceName --resource
 
 echo done! 
 
-# # # # # # # # # # # # # # # # # # # # # 
-# Security Wise we also need some tags :) 
-# # # # # # # # # # # # # # # # # # # # #
+# Todo
+# Add Outbound NSG rule for VNet -> allow outbound traffic to AzureBotService tag
 
-# Force tunnel all traffic on the vnet 
-# Add Outbound NSG rule for VNet Web App -> AzureBotService
+# Deploy Bot Service instance 
 
-# Deploy Bot Service
-# Deploy Bot Channels Registration
+    # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --location $location --app-type registration --appid $appId
+    # az bot create --resource-group $resourceGroup --name $botServiceName --sku F0 --appid myAppId --app-type registration --endpoint "https://${webAppName}azurewebsites.net/api/messages"} --kind registration --password password
+
+# Deploy the web app and function apps 
+
+    # build / publish dotnet publish -c Release -o ./publish --runtime linux-x64
+    # az webapp up--name $webappname --os-type Linux --runtime "dotnet|8"
+    # az webapp deploy --name $webappname --resource-group $resourceGroup --src-path $path --type zip --track-status true --async false
+
+    # func azure functionapp publish $functionAppName --csharp --nozip
+    
+# Deploy Bot Channels Registration and endpoint
 
