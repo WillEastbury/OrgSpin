@@ -105,8 +105,8 @@ az network private-dns record-set a add-record --resource-group $resourceGroup -
 # Setup the app service private endpoints
 resIdcr=$(az webapp show --name $webAppName --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
-az network private-endpoint create --resource-group $resourceGroup --name ${basename}webapprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}webconnection
-ipwithlf=$(az network private-endpoint show --name ${basename}webapprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
+az network private-endpoint create --resource-group $resourceGroup --name ${basename}webappprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}webconnection
+ipwithlf=$(az network private-endpoint show --name ${basename}webappprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
 ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $webAppName --ipv4-address $ipwithoutlf
 
@@ -114,12 +114,15 @@ az network private-dns record-set a add-record --resource-group $resourceGroup -
 resIdcr=$(az webapp show --name $functionAppName --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}fnappprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}fnconnection
-ipwithlf=$(az network private-endpoint show --name ${basename}fnapprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
+ipwithlf=$(az network private-endpoint show --name ${basename}fnappprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
 ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $functionAppName --ipv4-address $ipwithoutlf
 
+poolbackendaddress1=${basename}fnappprivateendpoint.azurewebsites.net
+poolbackendaddress2=${basename}webappprivateendpoint.azurewebsites.net
+
 # Setup the application gateway
-# Bug why can't I do this next line to create an empty frontend ip configuration
+# Bug? why can't I do this next line to create an empty frontend ip configuration
 az network application-gateway create --resource-group $resourceGroup --name $appGatewayName --vnet-name $vnetName --subnet $subnet1Name --capacity $agcap --http-settings-cookie-based-affinity Enabled --sku $agsku --public-ip-address $publicIPName 
 az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}webappbackendpool --servers $(az network private-endpoint show --name ${basename}webappprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
 az network application-gateway address-pool create --resource-group $resourceGroup --gateway-name $appGatewayName --name ${basename}functionappbackendpool --servers $(az network private-endpoint show --name ${basename}functionapprivateendpoint --resource-group $resourceGroup --query privateLinkServiceConnections[0].privateLinkServiceConnectionState.status --output tsv)
