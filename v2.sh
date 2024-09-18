@@ -1,5 +1,7 @@
 #!/bin/bash
-
+set -e
+# run like this 
+# bash v2.sh willdemo uksouth > output.log 2>&1 | tee -a error.log 
 # This script creates a resource group and deploys a set of resources to Azure for a basic vnet protected bot that can integrate with Microsoft Teams
 
 if [ $# -eq 0 ]
@@ -14,9 +16,11 @@ if [ $# -eq 1 ]
     exit 1
 fi
 
-basename=$1
+basename=$1 
 location=$2
 
+#basename="wiukdemo"
+#location="uksouth"
 resourceGroup="${basename}rg"
 cosmosDbAccount="${basename}cosmosdb"
 cosmosDbDatabase="${basename}db"
@@ -119,7 +123,7 @@ ipwithoutlf=${ipwithlf//$'\r'}
 az network private-dns record-set a add-record --resource-group $resourceGroup --zone-name privatelink.azurewebsites.net --record-set-name $webAppName --ipv4-address $ipwithoutlf
 
 # Now the function app 
-resIdcr=$(az webapp show --name $functionAppName --resource-group $resourceGroup --query id --output tsv)
+resIdcr=$(az functionapp show --name $functionAppName --resource-group $resourceGroup --query id --output tsv)
 resourceId=${resIdcr//$'\r'}
 az network private-endpoint create --resource-group $resourceGroup --name ${basename}fnappprivateendpoint --vnet-name $vnetName --subnet $subnet2Name --private-connection-resource-id $resourceId --group-id sites --connection-name ${basename}fnconnection
 ipwithlf=$(az network private-endpoint show --name ${basename}fnappprivateendpoint --resource-group $resourceGroup --query customDnsConfigs[0].ipAddresses[0] --output tsv)
@@ -136,7 +140,9 @@ priority 1
 # Deploy ACS Instance 
 az communication create --data-location global --name $acsServiceName --resource-group $resourceGroup --mi-system-assigned
 
+# # # # # # # # # # # # # # # # # # # # # 
 # Security Wise we also need some tags :) 
+# # # # # # # # # # # # # # # # # # # # #
 
 # Force tunnel all traffic on the vnet 
 # Add Outbound NSG rule for VNet Web App -> AzureBotService
