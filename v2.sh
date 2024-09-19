@@ -183,11 +183,11 @@ echo Now lock down services to accept access from subnet1 or subnet3 if needed
     # cosmosdb using PE 
     # az cosmosdb network-rule add -n $cosmosDbAccount -g $resourceGroup --virtual-network $vnetName --subnet $subnet3id --ignore-missing-vnet-service-endpoint true
 
-    # app service using pe 
+    # app service using pe so this is not needed
+    # az webapp config access-restriction add --resource-group $resourceGroup --name $webAppName --rule-name AppGwSubnet --priority 200 --subnet $subnet1Name --vnet-name $vnetName
 
-
-    # function app using pe
-
+    # function app using pe so this is not needed
+    # az webapp config access-restriction add --resource-group $resourceGroup --name $functionAppName --rule-name AppGwSubnet --priority 200 --subnet $subnet1Name --vnet-name $vnetName
 
 
 echo #nsg rule addition to network 
